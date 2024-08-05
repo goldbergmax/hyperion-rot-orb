@@ -74,10 +74,10 @@ class RotationalState():
     
     @classmethod
     def from_andoyer(cls, G, Lambda, L, g, lambda_node, l, A, B, C, permute_axes=np.eye(3)):
-        r_lab_to_ang_mom = R.from_euler('ZX', np.array([lambda_node, np.arccos(Lambda/G)]).T)
-        r_ang_mom_to_body = R.from_euler('ZXZ', np.array([g, np.arccos(L/G), l]).T)
+        r_ang_mom_to_lab = R.from_euler('ZX', np.array([lambda_node, np.arccos(Lambda/G)]).T)
+        r_body_to_ang_mom = R.from_euler('ZXZ', np.array([g, np.arccos(L/G), l]).T)
         r_permute_axes = R.from_matrix(permute_axes)
-        r_body_to_lab = r_lab_to_ang_mom * r_ang_mom_to_body * r_permute_axes
+        r_body_to_lab = r_ang_mom_to_lab * r_body_to_ang_mom * r_permute_axes
         G_body = np.array([0, 0, G])
         G_lab = r_body_to_lab.apply(G_body)
         omegaa = G_lab[0]/A
@@ -149,19 +149,19 @@ class RotationalState():
         """
         if self.A is None or self.B is None or self.C is None:
             raise ValueError("Cannot calculate Andoyer coordinates without principal moments of inertia")
-        r_lab_to_body = R.from_quat(self.quat[...,[1,2,3,0]])
+        r_body_to_lab = R.from_quat(self.quat[...,[1,2,3,0]])
         G_body = np.array([self.A*self.omegaa, self.B*self.omegab, self.C*self.omegac]).T
         G = np.linalg.norm(G_body, axis=-1)
-        G_lab = r_lab_to_body.apply(G_body)
+        G_lab = r_body_to_lab.apply(G_body)
         Lambda = G_lab[...,2]
         Inc = np.arccos(Lambda/G)
         lambda_node = np.arctan2(G_lab[...,0], -G_lab[...,1])
-        r_lab_to_ang_mom = R.from_euler('ZX', np.array([lambda_node, Inc]).T)
+        r_ang_mom_to_lab = R.from_euler('ZX', np.array([lambda_node, Inc]).T)
         assert np.linalg.det(permute_axes) == 1
         r_permute_axes = R.from_matrix(permute_axes)
-        r_ang_mom_to_body = r_lab_to_ang_mom.inv() * r_lab_to_body * r_permute_axes.inv()
-        g = np.remainder(r_ang_mom_to_body.as_euler('ZXZ')[...,0], 2*np.pi)
-        l = np.remainder(r_ang_mom_to_body.as_euler('ZXZ')[...,2], 2*np.pi)
+        r_body_to_ang_mom = r_ang_mom_to_lab.inv() * r_body_to_lab * r_permute_axes.inv()
+        g = np.remainder(r_body_to_ang_mom.as_euler('ZXZ')[...,0], 2*np.pi)
+        l = np.remainder(r_body_to_ang_mom.as_euler('ZXZ')[...,2], 2*np.pi)
         L_axis = r_permute_axes.inv().apply([0,0,1])
         if L_axis[0]:
             L = self.A*self.omegaa
@@ -172,7 +172,7 @@ class RotationalState():
         else:
             raise ValueError("Invalid permutation matrix")
         J = np.arccos(L/G)
-        assert np.allclose(np.remainder(r_ang_mom_to_body.as_euler('ZXZ')[...,1], 2*np.pi), J)
+        assert np.allclose(np.remainder(r_body_to_ang_mom.as_euler('ZXZ')[...,1], 2*np.pi), J)
         return np.asarray([G, Lambda, L, g, lambda_node, l])
 
 class RotationSimulation():
