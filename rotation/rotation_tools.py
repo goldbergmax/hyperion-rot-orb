@@ -78,11 +78,11 @@ class RotationalState():
         r_body_to_ang_mom = R.from_euler('ZXZ', np.array([g, np.arccos(L/G), l]).T)
         r_permute_axes = R.from_matrix(permute_axes)
         r_body_to_lab = r_ang_mom_to_lab * r_body_to_ang_mom * r_permute_axes
-        G_body = np.array([0, 0, G])
-        G_lab = r_body_to_lab.apply(G_body)
-        omegaa = G_lab[0]/A
-        omegab = G_lab[1]/B
-        omegac = G_lab[2]/C
+        G_ang_mom = np.array([0, 0, G])
+        G_body = r_body_to_ang_mom.inv().apply(G_ang_mom)
+        omegaa = G_body[0]/A
+        omegab = G_body[1]/B
+        omegac = G_body[2]/C
         theta, phi, psi = r_body_to_lab.inv().as_euler('ZXZ')
         return cls([theta, phi, psi, omegaa, omegab, omegac], A=A, B=B, C=C)
 
